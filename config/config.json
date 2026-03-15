@@ -1,0 +1,49 @@
+{
+  "client": {
+    "name": "Apex Demo Co",
+    "slug": "apex-demo",
+    "tier": 1
+  },
+  "brand": {
+    "logo_url": "https://placehold.co/160x40/1a1a2e/ffffff?text=ApexDemo",
+    "primary_color": "#4F46E5",
+    "secondary_color": "#06B6D4",
+    "font_heading": "Inter",
+    "font_body": "Inter"
+  },
+  "seo": {
+    "title": "Apex Demo Co — Modern Solutions for Growing Businesses",
+    "description": "Apex Demo Co helps small and mid-sized businesses scale with cutting-edge automation, consulting, and web solutions."
+  },
+  "pages": ["home", "services", "contact"],
+  "nav_links": [
+    { "label": "Home", "href": "/" },
+    { "label": "Services", "href": "/services" },
+    { "label": "Contact", "href": "/contact" }
+  ],
+  "components": {
+    "home": ["NavBar", "HeroSection", "Footer"],
+    "services": ["NavBar", "Footer"],
+    "contact": ["NavBar", "ContactForm", "Footer"]
+  },
+  "webhooks": {
+    "contact_form": null
+  },
+  "content": {
+    "hero": {
+      "headline": "Automate the Routine. Focus on What Matters.",
+      "subheadline": "Apex Demo Co delivers AI-powered automations and custom web solutions that eliminate manual work and accelerate your growth.",
+      "cta_text": "Get Started Today",
+      "cta_href": "/contact",
+      "background_image_url": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1600&q=80"
+    },
+    "footer": {
+      "tagline": "Built for the businesses that run the world.",
+      "social_links": [
+        { "platform": "Twitter", "href": "https://twitter.com/apexdemo" },
+        { "platform": "LinkedIn", "href": "https://linkedin.com/company/apexdemo" },
+        { "platform": "GitHub", "href": "https://github.com/apexdemo" }
+      ]
+    }
+  }
+}

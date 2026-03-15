@@ -1,0 +1,34 @@
+/*
+ * theme.css — CSS custom properties for the design system.
+ *
+ * These variables are NOT hardcoded here. They are injected at runtime by
+ * <ThemeProvider> (components/ThemeProvider.tsx), which reads the live
+ * SiteConfig and writes them onto :root via inline style.
+ *
+ * This file provides safe fallback values in case ThemeProvider has not
+ * yet hydrated (e.g. during SSR flash or if JS is disabled).
+ */
+
+:root {
+  --color-primary: #4f46e5;
+  --color-secondary: #06b6d4;
+  --font-heading: "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
+}
+
+/* Utility aliases consumed by Tailwind's extended theme (tailwind.config.ts) */
+.text-primary {
+  color: var(--color-primary);
+}
+.bg-primary {
+  background-color: var(--color-primary);
+}
+.text-secondary {
+  color: var(--color-secondary);
+}
+.bg-secondary {
+  background-color: var(--color-secondary);
+}
+.border-primary {
+  border-color: var(--color-primary);
+}
