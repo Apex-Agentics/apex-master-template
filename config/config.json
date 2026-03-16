@@ -2,7 +2,11 @@
   "client": {
     "name": "Apex Demo Co",
     "slug": "apex-demo",
-    "tier": 1
+    "tier": 1,
+    "phone": "+1 (555) 012-3456",
+    "address": "123 Automation Ave",
+    "city": "Austin",
+    "state": "TX"
   },
   "brand": {
     "logo_url": "https://placehold.co/160x40/1a1a2e/ffffff?text=ApexDemo",
@@ -22,13 +26,165 @@
     { "label": "Contact", "href": "/contact" }
   ],
   "components": {
-    "home": ["NavBar", "HeroSection", "Footer"],
-    "services": ["NavBar", "Footer"],
-    "contact": ["NavBar", "ContactForm", "Footer"]
+    "home": [
+      "NavBar",
+      "HeroSection",
+      "ServiceGrid",
+      "TestimonialCarousel",
+      "TeamSection",
+      "PricingTable",
+      "FAQAccordion",
+      "CTABanner",
+      "GoogleMapEmbed",
+      "Footer"
+    ],
+    "services": ["NavBar", "ServiceGrid", "PricingTable", "CTABanner", "Footer"],
+    "contact": ["NavBar", "ContactForm", "GoogleMapEmbed", "Footer"]
   },
   "webhooks": {
     "contact_form": null
   },
+  "map_embed_url": null,
+  "services": [
+    {
+      "icon": "Zap",
+      "title": "AI Process Automation",
+      "description": "Eliminate repetitive manual work with intelligent automation workflows that integrate with your existing tools."
+    },
+    {
+      "icon": "Globe",
+      "title": "Custom Web Development",
+      "description": "Performant, config-driven websites and web apps built on Next.js — from landing pages to full dashboards."
+    },
+    {
+      "icon": "BarChart3",
+      "title": "Data & Analytics",
+      "description": "Turn raw business data into actionable insights with automated reporting pipelines and live dashboards."
+    },
+    {
+      "icon": "MessageSquare",
+      "title": "CRM & Intake Automation",
+      "description": "Connect your contact forms, CRM, and email into a single automated intake pipeline so no lead falls through."
+    },
+    {
+      "icon": "FileText",
+      "title": "Document Processing",
+      "description": "OCR-powered extraction and structured output from PDFs, invoices, medical records, and more."
+    },
+    {
+      "icon": "Headphones",
+      "title": "Chief AI Officer Consulting",
+      "description": "Strategic AI roadmapping and implementation guidance for SMBs ready to operationalize artificial intelligence."
+    }
+  ],
+  "testimonials": [
+    {
+      "quote": "Apex Demo Co cut our intake processing time by 80%. What used to take our team half a day now runs automatically overnight.",
+      "name": "Sarah Mitchell",
+      "company": "Northgate Legal Group",
+      "rating": 5
+    },
+    {
+      "quote": "The custom dashboard they built gives me a real-time view of every KPI I care about. I finally feel in control of my data.",
+      "name": "James Okafor",
+      "company": "Okafor Construction LLC",
+      "rating": 5
+    },
+    {
+      "quote": "Their AI consulting engagement was worth every penny. We had a clear automation roadmap within two weeks.",
+      "name": "Dr. Priya Nair",
+      "company": "Nair Medical Associates",
+      "rating": 4
+    }
+  ],
+  "team": [
+    {
+      "photo_url": "https://i.pravatar.cc/300?img=11",
+      "name": "Michael Hartwell",
+      "title": "Founder & Chief AI Officer",
+      "bio": "10+ years building automation systems for SMBs. Obsessed with eliminating the manual work that drains great teams."
+    },
+    {
+      "photo_url": "https://i.pravatar.cc/300?img=47",
+      "name": "Elena Vasquez",
+      "title": "Lead Engineer",
+      "bio": "Full-stack developer specializing in Next.js, Python, and cloud-native integrations. She turns complex specs into clean code."
+    },
+    {
+      "photo_url": null,
+      "name": "David Park",
+      "title": "Automation Architect",
+      "bio": "N8N power user and API integration specialist. If two SaaS tools need to talk, David makes it happen."
+    }
+  ],
+  "pricing": [
+    {
+      "name": "Starter",
+      "price": "$997",
+      "billing_period": "one-time",
+      "features": [
+        "Single automation workflow",
+        "Up to 3 tool integrations",
+        "1 round of revisions",
+        "30-day email support"
+      ],
+      "cta_text": "Get Started",
+      "cta_url": "/contact",
+      "is_featured": false
+    },
+    {
+      "name": "Growth",
+      "price": "$2,497",
+      "billing_period": "one-time",
+      "features": [
+        "Up to 5 automation workflows",
+        "Unlimited tool integrations",
+        "Custom web dashboard",
+        "3 rounds of revisions",
+        "90-day priority support"
+      ],
+      "cta_text": "Most Popular",
+      "cta_url": "/contact",
+      "is_featured": true
+    },
+    {
+      "name": "Enterprise",
+      "price": "Custom",
+      "billing_period": "",
+      "features": [
+        "Unlimited workflows",
+        "Dedicated engineer",
+        "SLA-backed support",
+        "Quarterly strategy sessions",
+        "White-glove onboarding"
+      ],
+      "cta_text": "Book a Call",
+      "cta_url": "/contact",
+      "is_featured": false
+    }
+  ],
+  "faq": [
+    {
+      "question": "How long does a typical automation project take?",
+      "answer": "Most Starter projects are delivered within 5–7 business days. Growth projects typically run 2–4 weeks depending on integration complexity and feedback cycles."
+    },
+    {
+      "question": "Do I need to be technical to work with you?",
+      "answer": "Not at all. We handle everything technical and document all workflows in plain language so your team can understand and maintain them."
+    },
+    {
+      "question": "What tools do you integrate with?",
+      "answer": "We integrate with virtually any tool that has an API or webhook — including HubSpot, Salesforce, Slack, Google Workspace, QuickBooks, and hundreds more via N8N."
+    },
+    {
+      "question": "What happens if something breaks after delivery?",
+      "answer": "All packages include post-delivery support. Growth and Enterprise clients receive priority response within 4 business hours."
+    },
+    {
+      "question": "Can you build on top of automations we already have?",
+      "answer": "Yes. We frequently audit and extend existing N8N, Zapier, or Make.com workflows rather than rebuilding from scratch — preserving your investment."
+    }
+  ],
   "content": {
     "hero": {
       "headline": "Automate the Routine. Focus on What Matters.",
@@ -36,6 +192,12 @@
       "cta_text": "Get Started Today",
       "cta_href": "/contact",
       "background_image_url": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1600&q=80"
+    },
+    "cta_banner": {
+      "headline": "Ready to Eliminate Manual Work?",
+      "subheadline": "Book a free 30-minute discovery call and we'll identify your top three automation opportunities.",
+      "cta_text": "Book a Free Call",
+      "cta_href": "/contact"
     },
     "footer": {
       "tagline": "Built for the businesses that run the world.",
