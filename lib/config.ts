@@ -121,6 +121,11 @@ export const SiteConfigSchema = z.object({
       cta_text: z.string().min(1),
       cta_href: z.string(),
     }),
+    stripe_payment: z.object({
+      label: z.string().min(1),
+      url: z.string().url().nullable(),
+      variant: z.enum(["primary", "secondary"]),
+    }),
     footer: z.object({
       tagline: z.string(),
       social_links: z.array(SocialLinkSchema),

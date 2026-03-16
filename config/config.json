@@ -199,6 +199,11 @@
       "cta_text": "Book a Free Call",
       "cta_href": "/contact"
     },
+    "stripe_payment": {
+      "label": "Become a Member",
+      "url": null,
+      "variant": "primary"
+    },
     "footer": {
       "tagline": "Built for the businesses that run the world.",
       "social_links": [
