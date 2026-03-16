@@ -9,6 +9,10 @@ import PricingTable from "@/components/layer2/PricingTable";
 import FAQAccordion from "@/components/layer2/FAQAccordion";
 import CTABanner from "@/components/layer2/CTABanner";
 import GoogleMapEmbed from "@/components/layer2/GoogleMapEmbed";
+import ContactFormWebhook from "@/components/layer4/ContactFormWebhook";
+import AppointmentWidget from "@/components/layer4/AppointmentWidget";
+import LeadMagnetCapture from "@/components/layer4/LeadMagnetCapture";
+import ReviewRequestTrigger from "@/components/layer4/ReviewRequestTrigger";
 
 export default function HomePage() {
   const config = loadConfig();
@@ -25,10 +29,17 @@ export default function HomePage() {
         <HeroSection hero={config.content.hero} />
         <ServiceGrid services={config.services} />
         <TestimonialCarousel testimonials={config.testimonials} />
+        <LeadMagnetCapture leadMagnet={config.lead_magnet} />
         <TeamSection team={config.team} />
         <PricingTable pricing={config.pricing} />
+        <AppointmentWidget
+          calendlyUrl={config.webhooks.calendly_url}
+          calendlyMode={config.webhooks.calendly_mode}
+        />
         <FAQAccordion faq={config.faq} />
+        <ReviewRequestTrigger reviewRequest={config.review_request} />
         <CTABanner ctaBanner={config.content.cta_banner} />
+        <ContactFormWebhook webhookUrl={config.webhooks.contact_form_enhanced} />
         <GoogleMapEmbed mapEmbedUrl={config.map_embed_url} />
       </main>
       <Footer

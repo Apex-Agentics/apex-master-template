@@ -34,7 +34,10 @@ export const LAYER_3_COMPONENTS = [
 ] as const;
 
 export const LAYER_4_COMPONENTS = [
-  // Webhook-gated components (e.g. live chat, booking widget) — added in Layer 4 build
+  "ContactFormWebhook",
+  "AppointmentWidget",
+  "LeadMagnetCapture",
+  "ReviewRequestTrigger",
 ] as const;
 
 export type Layer1Component = (typeof LAYER_1_COMPONENTS)[number];

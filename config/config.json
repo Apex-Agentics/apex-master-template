@@ -42,7 +42,21 @@
     "contact": ["NavBar", "ContactForm", "GoogleMapEmbed", "Footer"]
   },
   "webhooks": {
-    "contact_form": null
+    "contact_form": null,
+    "contact_form_enhanced": null,
+    "calendly_url": null,
+    "calendly_mode": "link"
+  },
+  "lead_magnet": {
+    "headline": "Get Our Free Automation Checklist",
+    "button_text": "Send It to Me",
+    "webhook_url": null,
+    "asset_url": null
+  },
+  "review_request": {
+    "google_review_url": null,
+    "webhook_url": null,
+    "prompt_text": "Enjoying our service? Leave us a review."
   },
   "map_embed_url": null,
   "services": [

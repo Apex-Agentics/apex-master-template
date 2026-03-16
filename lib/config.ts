@@ -91,6 +91,22 @@ export const SiteConfigSchema = z.object({
   components: z.record(z.string(), z.array(z.string())),
   webhooks: z.object({
     contact_form: z.string().url().nullable(),
+    // Layer 4 — N8N webhook connectors
+    contact_form_enhanced: z.string().url().nullable(),
+    calendly_url: z.string().url().nullable(),
+    calendly_mode: z.enum(["embed", "link"]),
+  }),
+  // Layer 4 — top-level webhook-gated config blocks
+  lead_magnet: z.object({
+    headline: z.string().min(1),
+    button_text: z.string().min(1),
+    webhook_url: z.string().url().nullable(),
+    asset_url: z.string().url().nullable(),
+  }),
+  review_request: z.object({
+    google_review_url: z.string().url().nullable(),
+    webhook_url: z.string().url().nullable(),
+    prompt_text: z.string().min(1),
   }),
   // Layer 2 — top-level arrays
   map_embed_url: z.string().url().nullable(),
