@@ -28,14 +28,14 @@ const ServiceItemSchema = z.object({
 const TestimonialSchema = z.object({
   quote: z.string().min(1),
   name: z.string().min(1),
-  company: z.string(),
+  company: z.string().optional().default(""),
   rating: z.number().int().min(1).max(5).optional(),
 });
 
 const TeamMemberSchema = z.object({
   photo_url: z.string().url().nullable(),
   name: z.string().min(1),
-  title: z.string(),
+  title: z.string().optional().default(""),
   bio: z.string(),
 });
 
@@ -69,7 +69,7 @@ export const SiteConfigSchema = z.object({
     state: z.string(),
   }),
   brand: z.object({
-    logo_url: z.string().url("brand.logo_url must be a valid URL"),
+    logo_url: z.string().url("brand.logo_url must be a valid URL").nullable(),
     primary_color: z
       .string()
       .regex(/^#[0-9A-Fa-f]{3,8}$/, "brand.primary_color must be a hex color"),
@@ -98,15 +98,15 @@ export const SiteConfigSchema = z.object({
   }),
   // Layer 4 — top-level webhook-gated config blocks
   lead_magnet: z.object({
-    headline: z.string().min(1),
-    button_text: z.string().min(1),
+    headline: z.string(),
+    button_text: z.string(),
     webhook_url: z.string().url().nullable(),
     asset_url: z.string().url().nullable(),
   }),
   review_request: z.object({
     google_review_url: z.string().url().nullable(),
     webhook_url: z.string().url().nullable(),
-    prompt_text: z.string().min(1),
+    prompt_text: z.string(),
   }),
   // Layer 2 — top-level arrays
   map_embed_url: z.string().url().nullable(),
@@ -138,7 +138,7 @@ export const SiteConfigSchema = z.object({
       cta_href: z.string(),
     }),
     stripe_payment: z.object({
-      label: z.string().min(1),
+      label: z.string(),
       url: z.string().url().nullable(),
       variant: z.enum(["primary", "secondary"]),
     }),
