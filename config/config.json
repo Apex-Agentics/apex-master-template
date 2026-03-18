@@ -40,8 +40,9 @@
   "webhooks": {
     "contact_form": null,
     "contact_form_enhanced": null,
-    "calendly_url": null,
-    "calendly_mode": "link"
+    "appointment_url": null,
+    "calendly_mode": "link",
+    "payment_url": null
   },
   "lead_magnet": {
     "headline": "Get Our Free Automation Checklist",

@@ -12,7 +12,7 @@ const NavLinkSchema = z.object({
 
 const SocialLinkSchema = z.object({
   platform: z.string(),
-  href: z.string().url(),
+  href: z.string().url().optional().default(""),
 });
 
 // ---------------------------------------------------------------------------
@@ -94,8 +94,9 @@ export const SiteConfigSchema = z.object({
     contact_form: z.string().url().nullable(),
     // Layer 4 — N8N webhook connectors
     contact_form_enhanced: z.string().url().nullable(),
-    calendly_url: z.string().url().nullable(),
+    appointment_url: z.string().url().nullable(),
     calendly_mode: z.enum(["embed", "link"]),
+    payment_url: z.string().url().nullable(),
   }),
   // Layer 4 — top-level webhook-gated config blocks
   lead_magnet: z.object({

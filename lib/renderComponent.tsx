@@ -141,7 +141,7 @@ export function renderComponent(
       return (
         <AppointmentWidget
           key={`${name}-${index}`}
-          calendlyUrl={config.webhooks.calendly_url}
+          calendlyUrl={config.webhooks.appointment_url}
           calendlyMode={config.webhooks.calendly_mode}
         />
       );
