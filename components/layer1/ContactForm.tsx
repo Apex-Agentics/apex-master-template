@@ -21,13 +21,10 @@ type SubmitStatus = "idle" | "submitting" | "success" | "error";
  * Includes basic client-side validation before submission.
  */
 export default function ContactForm({ webhookUrl }: ContactFormProps) {
-  // If no webhook is configured, silently render nothing — never crash.
-  if (!webhookUrl) return null;
-
   return <ContactFormInner webhookUrl={webhookUrl} />;
 }
 
-function ContactFormInner({ webhookUrl }: { webhookUrl: string }) {
+function ContactFormInner({ webhookUrl }: { webhookUrl: string | null }) {
   const [form, setForm] = useState<FormState>({
     name: "",
     email: "",
@@ -54,15 +51,23 @@ function ContactFormInner({ webhookUrl }: { webhookUrl: string }) {
     if (!validate()) return;
 
     setStatus("submitting");
+
+    // Demo mode — no webhook configured yet; simulate submission
+    if (!webhookUrl) {
+      setTimeout(() => {
+        setStatus("success");
+        setForm({ name: "", email: "", message: "" });
+      }, 800);
+      return;
+    }
+
     try {
       const res = await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-
       if (!res.ok) throw new Error(`Webhook responded with ${res.status}`);
-
       setStatus("success");
       setForm({ name: "", email: "", message: "" });
     } catch {
