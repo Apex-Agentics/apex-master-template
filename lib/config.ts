@@ -63,6 +63,7 @@ export const SiteConfigSchema = z.object({
     name: z.string().min(1, "client.name is required"),
     slug: z.string().min(1, "client.slug is required"),
     tier: z.union([z.literal(1), z.literal(2)]),
+    package: z.enum(["Starter", "Full Site", "Tier 2"]),
     phone: z.string(),
     address: z.string(),
     city: z.string(),
@@ -147,6 +148,39 @@ export const SiteConfigSchema = z.object({
       social_links: z.array(SocialLinkSchema),
     }),
   }),
+}).superRefine((data, ctx) => {
+  // Every page slug must have a matching components entry
+  for (const page of data.pages) {
+    if (!data.components[page]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `pages includes "${page}" but components.${page} is missing`,
+        path: ["components"],
+      });
+    }
+  }
+
+  // Tier 1: no Layer 3 components allowed
+  const layer3Names = [
+    "StripeCheckoutButton",
+    "SupabaseAuthWrapper",
+    "ProtectedRoute",
+    "ClientDashboard",
+    "ProductGrid",
+  ];
+  if (data.client.tier === 1) {
+    for (const [page, comps] of Object.entries(data.components)) {
+      for (const comp of comps) {
+        if (layer3Names.includes(comp)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Tier 1 config includes Layer 3 component "${comp}" on page "${page}"`,
+            path: ["components", page],
+          });
+        }
+      }
+    }
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -181,6 +215,14 @@ export function loadConfig(): SiteConfig {
     throw new Error(
       `[apex-master-template] config/config.json validation failed:\n${messages}`
     );
+  }
+
+  if (result.data.client.tier === 2) {
+    if (!process.env.NEXT_PUBLIC_STRIPE_KEY && !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      console.warn(
+        "[config] Tier 2 site loaded but no Stripe or Supabase env vars detected."
+      );
+    }
   }
 
   _cached = result.data;

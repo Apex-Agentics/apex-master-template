@@ -3,6 +3,7 @@
     "name": "Apex Demo Co",
     "slug": "apex-demo",
     "tier": 1,
+    "package": "Full Site",
     "phone": "+1 (555) 012-3456",
     "address": "123 Automation Ave",
     "city": "Austin",
@@ -19,27 +20,22 @@
     "title": "Apex Demo Co — Modern Solutions for Growing Businesses",
     "description": "Apex Demo Co helps small and mid-sized businesses scale with cutting-edge automation, consulting, and web solutions."
   },
-  "pages": ["home", "services", "contact"],
+  "pages": ["home", "services", "about", "contact", "pricing", "faq"],
   "nav_links": [
-    { "label": "Home", "href": "/" },
+    { "label": "Home",     "href": "/" },
     { "label": "Services", "href": "/services" },
-    { "label": "Contact", "href": "/contact" }
+    { "label": "About",    "href": "/about" },
+    { "label": "Contact",  "href": "/contact" },
+    { "label": "Pricing",  "href": "/pricing" },
+    { "label": "FAQ",      "href": "/faq" }
   ],
   "components": {
-    "home": [
-      "NavBar",
-      "HeroSection",
-      "ServiceGrid",
-      "TestimonialCarousel",
-      "TeamSection",
-      "PricingTable",
-      "FAQAccordion",
-      "CTABanner",
-      "GoogleMapEmbed",
-      "Footer"
-    ],
+    "home":     ["NavBar", "HeroSection", "ServiceGrid", "TestimonialCarousel", "PricingTable", "FAQAccordion", "CTABanner", "Footer"],
     "services": ["NavBar", "ServiceGrid", "PricingTable", "CTABanner", "Footer"],
-    "contact": ["NavBar", "ContactForm", "GoogleMapEmbed", "Footer"]
+    "about":    ["NavBar", "TeamSection", "CTABanner", "Footer"],
+    "contact":  ["NavBar", "ContactForm", "GoogleMapEmbed", "Footer"],
+    "pricing":  ["NavBar", "PricingTable", "FAQAccordion", "CTABanner", "Footer"],
+    "faq":      ["NavBar", "FAQAccordion", "CTABanner", "Footer"]
   },
   "webhooks": {
     "contact_form": null,
