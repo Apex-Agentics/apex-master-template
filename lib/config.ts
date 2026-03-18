@@ -129,7 +129,7 @@ export const SiteConfigSchema = z.object({
       subheadline: z.string(),
       cta_text: z.string().min(1),
       cta_href: z.string(),
-      background_image_url: z.string().url().optional(),
+      background_image_url: z.string().url().nullable().optional(),
     }),
     cta_banner: z.object({
       headline: z.string().min(1),
