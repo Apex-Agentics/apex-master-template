@@ -32,15 +32,17 @@ export default function NavBar({
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex-shrink-0 flex items-center">
-            <Image
-              src={brand.logo_url}
-              alt={`logo`}
-              width={160}
-              height={40}
-              className="h-8 w-auto"
-              priority
-              unoptimized
-            />
+            {brand.logo_url && (
+              <Image
+                src={brand.logo_url}
+                alt="logo"
+                width={160}
+                height={40}
+                className="h-8 w-auto"
+                priority
+                unoptimized
+              />
+            )}
           </Link>
 
           {/* Desktop nav links */}
