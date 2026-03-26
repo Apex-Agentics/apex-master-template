@@ -63,6 +63,8 @@ export function renderComponent(
         <ContactForm
           key={`${name}-${index}`}
           webhookUrl={config.webhooks.contact_form}
+          client={config.client}
+          services={config.services}
         />
       );
     case "SEOMeta":
