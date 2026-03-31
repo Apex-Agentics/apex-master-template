@@ -1,0 +1,848 @@
+{
+  "name": "Apex — Website Build Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "5a6b7c8d-9e0f-1a2b-3c4d-5e6f7a8b9c0d",
+              "leftValue": "={{ $json.business_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d7332368-c1c7-479a-9913-111535fd1d1e",
+      "name": "Has Existing Website?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        22336,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.firecrawl.dev/v1/scrape",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ url: $('Build Pipeline Transform').first().json.business_url, formats: ['markdown'], onlyMainContent: true }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "517ad849-1907-482c-8443-6018f23cb213",
+      "name": "Firecrawl — Scrape Existing Site",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        22704,
+        288
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "OcOP7ZtZHsBLvtAO",
+          "name": "Firecrawl API Key"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-firecrawl-1",
+              "name": "firecrawl_content",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "assign-firecrawl-2",
+              "name": "firecrawl_error",
+              "value": "={{ $json.error?.message ?? 'Firecrawl scrape failed — continuing without scraped content.' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "929fc80e-a219-4c1b-a39a-db353cf641a0",
+      "name": "Handle Firecrawl Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        22864,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Anthropic node may return content[0].text (raw API) or text (native node)\nconst rawText = (\n  $input.item.json?.content?.[0]?.text ??\n  $input.item.json?.text ??\n  $input.item.json?.message ??\n  $input.item.json?.output\n);\nif (!rawText) throw new Error('No text output from Anthropic node. Input: ' + JSON.stringify($input.item.json));\n\nlet configJson;\ntry {\n  const cleaned = rawText\n    .replace(/^```(?:json)?\\s*/i, '')\n    .replace(/\\s*```$/, '')\n    .trim();\n  configJson = JSON.parse(cleaned);\n} catch (e) {\n  throw new Error('CONFIG_PARSE_FAILED: ' + rawText);\n}\n\n// --- Auto-fill fields Claude sometimes omits ---\n\n// Pricing tiers\nif (Array.isArray(configJson.pricing)) {\n  for (const tier of configJson.pricing) {\n    if (!tier.cta_text) tier.cta_text = 'Get Started';\n    if (!tier.cta_url) tier.cta_url = '/contact';\n    if (tier.is_featured === undefined) tier.is_featured = false;\n    if (!tier.billing_period) tier.billing_period = '/mo';\n    if (!Array.isArray(tier.features)) tier.features = [];\n  }\n}\n\n// Footer social links\nif (configJson.content && configJson.content.footer && !Array.isArray(configJson.content.footer.social_links)) {\n  configJson.content.footer.social_links = [];\n}\n\n// Nullable URL fields\nif (configJson.map_embed_url === undefined) configJson.map_embed_url = null;\nif (configJson.brand && configJson.brand.logo_url === undefined) configJson.brand.logo_url = null;\n\n// Force team photos to null — avatar placeholder is better than fake headshots\nif (Array.isArray(configJson.team)) {\n  for (const member of configJson.team) {\n    member.photo_url = null;\n  }\n}\n\n// Force hero background to null — Unsplash node will inject a real image\nif (configJson.content && configJson.content.hero) {\n  configJson.content.hero.background_image_url = null;\n}\n\n// --- End auto-fill ---\n\nif (!configJson.client?.slug) {\n  throw new Error('CONFIG_PARSE_FAILED: Missing client.slug in generated config');\n}\n\nconst clientSlug = configJson.client.slug;\nconst configJsonStr = JSON.stringify(configJson, null, 2);\nconst configJsonB64 = Buffer.from(configJsonStr).toString('base64');\n\nconst tallyData = $('Build Pipeline Transform').first().json;\n\n// Use Claude-generated image search query, fall back to first service title\nconst searchQuery = configJson.image_search_query\n  || (configJson.services?.[0]?.title ?? 'professional business');\n\nreturn [{\n  json: {\n    config_json: configJson,\n    config_json_b64: configJsonB64,\n    client_slug: clientSlug,\n    business_name: tallyData.business_name,\n    tier: tallyData.tier || 1,\n    unsplash_query: searchQuery\n  }\n}];\n"
+      },
+      "id": "5783df68-0d4e-49fb-904b-39d1b0c1c341",
+      "name": "Parse and Validate Config JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23808,
+        688
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.unsplash.com/search/photos?query={{ encodeURIComponent($json.unsplash_query) }}&orientation=landscape&per_page=1&client_id=33-yTCW0GB-dNo1naOs6mg9-J7aPsWV2qelsRXNYhvs\n",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "c5609a8e-b891-48a0-87b9-7b1437338700",
+      "name": "Unsplash — Fetch Hero Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        24160,
+        672
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Inject Unsplash hero image URL into config, re-encode base64.\n// If Unsplash call failed, fall back gracefully (hero renders CSS gradient).\n\nconst prev = $('Parse and Validate Config JSON').first().json;\nconst configJson = JSON.parse(JSON.stringify(prev.config_json));\n\n// Try to extract URL from Unsplash response\nconst unsplashResults = $input.item.json?.results;\nconst heroUrl = (Array.isArray(unsplashResults) && unsplashResults.length > 0)\n  ? unsplashResults[0].urls?.regular ?? unsplashResults[0].urls?.full ?? null\n  : null;\n\nif (heroUrl && configJson.content && configJson.content.hero) {\n  configJson.content.hero.background_image_url = heroUrl;\n}\n\nconst configJsonStr = JSON.stringify(configJson, null, 2);\nconst configJsonB64 = Buffer.from(configJsonStr).toString('base64');\n\nreturn [{\n  json: {\n    ...prev,\n    config_json: configJson,\n    config_json_b64: configJsonB64\n  }\n}];\n"
+      },
+      "id": "5fac2951-6f74-439b-90af-c86602f8aad3",
+      "name": "Inject Hero Image URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        24480,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/repos/Apex-Agentics/apex-master-template/generate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ '{\"owner\":\"Apex-Agentics\",\"name\":\"client-' + $('Parse and Validate Config JSON').first().json.client_slug + '\",\"private\":false}' }}",
+        "options": {}
+      },
+      "id": "2307f05d-05ff-41bf-9960-b0b372599c03",
+      "name": "GitHub — Create Client Repo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        24768,
+        688
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "2nY8VufKtz0hJJpp",
+          "name": "GitHub API Key"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "id": "14f1c48a-cce4-4a52-88d0-4ee189c720c9",
+      "name": "Wait for Fork to Complete",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        25200,
+        672
+      ],
+      "webhookId": "fork-wait-a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/Apex-Agentics/client-{{ $('Parse and Validate Config JSON').first().json.client_slug }}/contents/config/config.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2d00f285-b465-4e31-97dd-e48072a5f986",
+      "name": "GitHub — Get config.json SHA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        25424,
+        672
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "2nY8VufKtz0hJJpp",
+          "name": "GitHub API Key"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://api.github.com/repos/Apex-Agentics/client-{{ $('Parse and Validate Config JSON').first().json.client_slug }}/contents/config/config.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ '{\"message\":\"feat: add client config — ' + $('Inject Hero Image URL').first().json.business_name + '\",\"content\":\"' + $('Inject Hero Image URL').first().json.config_json_b64 + '\"' + ($json.sha ? ',\"sha\":\"' + $json.sha + '\"' : '') + '}' }}",
+        "options": {}
+      },
+      "id": "dbc4f246-c67f-4769-9a9d-a188089a9222",
+      "name": "GitHub — Commit config.json",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        25696,
+        672
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "2nY8VufKtz0hJJpp",
+          "name": "GitHub API Key"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vercel.com/v10/projects",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ name: 'client-' + $('Parse and Validate Config JSON').first().json.client_slug, gitRepository: { type: 'github', repo: 'Apex-Agentics/client-' + $('Parse and Validate Config JSON').first().json.client_slug }, framework: 'nextjs' }) }}",
+        "options": {}
+      },
+      "id": "581d7057-c4fd-4fb9-b2ee-e7867ecbe748",
+      "name": "Vercel — Create Project",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        25920,
+        656
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "1B28eENRxzg8cjKQ",
+          "name": "Vercel API Key"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vercel.com/v13/deployments",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ name: 'client-' + $('Parse and Validate Config JSON').first().json.client_slug, gitSource: { type: 'github', repoId: String($('GitHub — Create Client Repo').first().json.id), ref: 'main' } }) }}",
+        "options": {}
+      },
+      "id": "879e6624-046f-4cfb-9ccc-ad98b1a1f95b",
+      "name": "Vercel — Trigger Deploy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        26176,
+        640
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "1B28eENRxzg8cjKQ",
+          "name": "Vercel API Key"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "amount": 45
+      },
+      "id": "d59fff96-eb1a-4243-824b-358b89ef968d",
+      "name": "Wait for Vercel Deploy",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        26432,
+        624
+      ],
+      "webhookId": "deploy-wait-b2c3d4e5-f6a7-8901-bcde-f12345678901"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.Telegram_ID }}",
+        "text": "=🏗️ *New Site Ready — {{ $('Parse and Validate Config JSON').first().json.business_name }}*\n\nTier: {{ $('Parse and Validate Config JSON').first().json.tier }}\nPreview: https://{{ $('Vercel — Trigger Deploy').first().json.url }}\nRepo: `client-{{ $('Parse and Validate Config JSON').first().json.client_slug }}`\n\nReview the preview and merge `main` in GitHub to push live.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "029eb3ab-9c99-4583-9758-952c26870a55",
+      "name": "Telegram — HITL Review Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        26688,
+        736
+      ],
+      "webhookId": "1697b3bb-fc47-4434-ad78-89937cd54f98",
+      "credentials": {
+        "telegramApi": {
+          "id": "8jvnsVKmHi15ipbB",
+          "name": "Apex Assistant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.Telegram_ID }}",
+        "text": "=❌ *Build failed — {{ $('Build Pipeline Transform').first().json.business_name ?? 'Unknown client' }}*\n\nError: {{ $json.error?.message ?? $json.message ?? 'Unknown error' }}\n\nCheck your N8N execution log for details.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "8a886014-c6d0-41a9-a93b-eb5bdbebe11d",
+      "name": "Error — Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        26704,
+        2192
+      ],
+      "webhookId": "7e756ef9-3f1e-4b13-ab22-e37d79c2085d",
+      "credentials": {
+        "telegramApi": {
+          "id": "8jvnsVKmHi15ipbB",
+          "name": "Apex Assistant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "michael@apexagentics.io",
+        "subject": "=🏗️ New Site Ready for Review — {{ $('Parse and Validate Config JSON').first().json.business_name }}",
+        "message": "=<h2>New Website Build Complete</h2><p>A new client site has been built and is awaiting your review before going live.</p><table style=\"border-collapse:collapse;width:100%;max-width:600px\"><tr><td style=\"padding:8px;border:1px solid #e5e7eb\"><strong>Client</strong></td><td style=\"padding:8px;border:1px solid #e5e7eb\">{{ $('Parse and Validate Config JSON').first().json.business_name }}</td></tr><tr><td style=\"padding:8px;border:1px solid #e5e7eb\"><strong>Tier</strong></td><td style=\"padding:8px;border:1px solid #e5e7eb\">{{ $('Parse and Validate Config JSON').first().json.tier }}</td></tr><tr><td style=\"padding:8px;border:1px solid #e5e7eb\"><strong>Preview URL</strong></td><td style=\"padding:8px;border:1px solid #e5e7eb\"><a href=\"https://{{ $('Vercel — Trigger Deploy').first().json.url }}\">https://{{ $('Vercel — Trigger Deploy').first().json.url }}</a></td></tr><tr><td style=\"padding:8px;border:1px solid #e5e7eb\"><strong>GitHub Repo</strong></td><td style=\"padding:8px;border:1px solid #e5e7eb\"><a href=\"https://github.com/Apex-Agentics/client-{{ $('Parse and Validate Config JSON').first().json.client_slug }}\">View on GitHub</a></td></tr><tr><td style=\"padding:8px;border:1px solid #e5e7eb\"><strong>Notes</strong></td><td style=\"padding:8px;border:1px solid #e5e7eb\">{{ $('Build Pipeline Transform').first().json.notes || '(none)' }}</td></tr></table><p style=\"margin-top:24px\">Review the preview URL above. When approved, merge the <code>main</code> branch in GitHub to push live.</p><hr/><details><summary><strong>Config JSON</strong></summary><pre style=\"background:#f3f4f6;padding:16px;border-radius:8px;overflow:auto;font-size:12px\">{{ JSON.stringify($('Inject Hero Image URL').first().json.config_json, null, 2) }}</pre></details>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        26688,
+        528
+      ],
+      "id": "d023b962-dbe9-4146-bc7b-f33656622a43",
+      "name": "Email — HITL Review Alert",
+      "webhookId": "90fc512b-d63e-42dd-ab54-08eb2f296cdf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1Opa6vb2Yl9N3HCS",
+          "name": "Apex Agentics"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const tally = $('Build Pipeline Transform').first().json;\n\nconst scrapedContent = $('Firecrawl — Scrape Existing Site').isExecuted\n  ? ($('Firecrawl — Scrape Existing Site').first().json?.data?.markdown ?? '')\n  : '';\n\nconst schema = {\"client\":{\"name\":\"\",\"slug\":\"\",\"tier\":1,\"package\":\"\",\"phone\":\"\",\"address\":\"\",\"city\":\"\",\"state\":\"\"},\"brand\":{\"logo_url\":null,\"primary_color\":\"\",\"secondary_color\":\"\",\"font_heading\":\"Inter\",\"font_body\":\"Inter\"},\"seo\":{\"title\":\"\",\"description\":\"\"},\"pages\":[],\"nav_links\":[{\"label\":\"\",\"href\":\"\"}],\"components\":{\"home\":[]},\"webhooks\":{\"contact_form\":null,\"contact_form_enhanced\":null,\"appointment_url\":null,\"calendly_mode\":\"link\",\"payment_url\":null},\"lead_magnet\":{\"webhook_url\":null,\"headline\":\"\",\"button_text\":\"\",\"asset_url\":null},\"review_request\":{\"google_review_url\":null,\"webhook_url\":null,\"prompt_text\":\"\"},\"map_embed_url\":null,\"services\":[{\"icon\":\"\",\"title\":\"\",\"description\":\"\"}],\"testimonials\":[{\"name\":\"\",\"company\":\"\",\"quote\":\"\",\"rating\":5}],\"team\":[{\"name\":\"\",\"title\":\"\",\"bio\":\"\",\"photo_url\":null}],\"pricing\":[{\"name\":\"\",\"price\":\"\",\"billing_period\":\"/mo\",\"features\":[],\"is_featured\":false,\"cta_text\":\"Get Started\",\"cta_url\":\"/contact\"}],\"faq\":[{\"question\":\"\",\"answer\":\"\"}],\"content\":{\"hero\":{\"headline\":\"\",\"subheadline\":\"\",\"cta_text\":\"\",\"cta_href\":\"\",\"background_image_url\":null},\"cta_banner\":{\"headline\":\"\",\"subheadline\":\"\",\"cta_text\":\"\",\"cta_href\":\"\"},\"stripe_payment\":{\"label\":\"\",\"url\":null,\"variant\":\"primary\"},\"footer\":{\"tagline\":\"\",\"social_links\":[]}},\"image_search_query\":\"\"};\n\nconst systemPart = [\n  'You are a professional web copywriter and JSON generator for Apex Agentics website builds.',\n  '',\n  'Output ONLY valid raw JSON — no markdown fences, no explanation, no commentary.',\n  '',\n  'COPY QUALITY RULES — these override everything:',\n  '- Every line of copy must be specific to THIS business',\n  '- Never use generic phrases like \"end-to-end solutions\", \"modern businesses\", \"cutting edge\", \"seamless experience\"',\n  '- hero.headline must name the specific service AND location if provided (e.g. \"Simpsonville\\'s Premier Boxing Gym\" not \"Train Like a Champion\")',\n  '- hero.subheadline must include one concrete differentiator pulled from the scraped content',\n  '- All service titles and descriptions must match actual services this business offers — pull from scraped content, do not invent',\n  '- FAQ questions must be questions real customers of THIS specific business type actually ask',\n  '- CTA banner headline must reference a specific action relevant to this business (e.g. \"Book Your First Class Free\" for a gym, not \"Get Started Today\")',\n  '- footer tagline must be unique to this business, not generic',\n  '- content.footer.social_links: always output an empty array [] — never guess social URLs',\n  '',\n  'PAGE AND COMPONENT RULES:',\n  '- package \"Starter\" → pages: [\"home\",\"contact\"]',\n  '- package \"Full Site\" → pages: [\"home\",\"services\",\"about\",\"contact\",\"pricing\",\"faq\"]',\n  '- package \"Tier 2\" → same as Full Site, tier: 2',\n  '',\n  'Component matrix — use EXACTLY these arrays:',\n  '  home:     [\"NavBar\",\"HeroSection\",\"ServiceGrid\",\"TestimonialCarousel\",\"PricingTable\",\"FAQAccordion\",\"CTABanner\",\"Footer\"]',\n  '  services: [\"NavBar\",\"ServiceGrid\",\"PricingTable\",\"CTABanner\",\"Footer\"]',\n  '  about:    [\"NavBar\",\"TeamSection\",\"CTABanner\",\"Footer\"]',\n  '  contact:  [\"NavBar\",\"ContactForm\",\"GoogleMapEmbed\",\"Footer\"]',\n  '  pricing:  [\"NavBar\",\"PricingTable\",\"FAQAccordion\",\"CTABanner\",\"Footer\"]',\n  '  faq:      [\"NavBar\",\"FAQAccordion\",\"CTABanner\",\"Footer\"]',\n  '',\n  'BRAND COLOR RULES:',\n  '- If client provides a color name (e.g. \"black\"), convert to the correct hex code (#000000)',\n  '- primary_color and secondary_color must always be valid hex codes',\n  '- If only one color is provided, derive a complementary secondary color',\n  '- Never leave color fields as empty strings',\n  '',\n  'FIELD RULES:',\n  '- client.package: REQUIRED — must be exactly one of: Starter, Full Site, Tier 2. Copy the normalized package value.',\n  '- client.slug: lowercase, hyphens only, no spaces, derived from business name',\n  '- client.package: copy from the Package field provided',\n  '- client.tier: 1 for Starter and Full Site, 2 for Tier 2',\n  '- nav_links: one entry per page in config.pages. href = \"/\" for home, \"/services\", \"/about\", \"/contact\", \"/pricing\", \"/faq\". Labels are business-appropriate',\n  '- services: exactly 3 or 6 items; icon must be one of: Zap,Globe,BarChart3,MessageSquare,FileText,Headphones,Wrench,Settings,Shield,Rocket',\n  '- testimonials: at least 3 items; fields are name, company, quote, rating (1-5 integer)',\n  '- team: fields are name, title, bio, photo_url',\n  '- pricing: exactly 2 or 3 tiers; fields are name, price, billing_period, features (array), is_featured (boolean), cta_text, cta_url',\n  '- faq: generate 3-5 questions relevant to the specific business',\n  '- If appointment_url is provided copy it to webhooks.appointment_url',\n  '- If payment_url is provided copy it to content.stripe_payment.url',\n  '- If google_review_url is provided copy it to review_request.google_review_url',\n  '- map_embed_url: always null',\n  '- brand.logo_url: always null (logo added manually after build)',\n  '- lead_magnet, review_request, stripe_payment: generate realistic placeholder text even if not used',\n  '- image_search_query: 2-4 word Unsplash search phrase describing this business visually (e.g. \"crossfit gym workout\", \"house cleaning service\", \"boxing gym training\", \"dental office modern\"). Do NOT include the business name or city — just the visual concept.',\n  '- content.hero.background_image_url: always set to null (pipeline will inject a real image via Unsplash)',\n  '- team[].photo_url: always set to null (placeholder avatar will render — never use picsum or fake headshots)',\n  '',\n  'You MUST output JSON with this EXACT structure (same key names, same nesting — fill in real values):',\n  JSON.stringify(schema),\n  '',\n  'Output raw JSON only — no markdown, no explanation'\n].join('\\n');\n\nconst businessPart = [\n  'Generate a config.json for this business:',\n  'Name: ' + tally.business_name,\n  'Phone: ' + (tally.business_phone || ''),\n  'Address: ' + (tally.business_address || '') + ', ' + (tally.business_city || '') + ', ' + (tally.business_state || ''),\n  'Tier: ' + (tally.tier || 1),\n  'Primary color: ' + (tally.primary_color || '#4F46E5'),\n  'Secondary color: ' + (tally.secondary_color || '#06B6D4'),\n  'Tagline: ' + (tally.tagline || ''),\n  'Package: ' + (tally.package || 'Starter'),\n  'Appointment URL: ' + (tally.appointment_url || 'null'),\n  'Payment URL: ' + (tally.payment_url || 'null'),\n  'Google Review URL: ' + (tally.google_review_url || 'null'),\n  'Notes: ' + (tally.notes || ''),\n  '',\n  'Scraped website content:',\n  scrapedContent\n].join('\\n');\n\nreturn [{ json: { prompt: systemPart + '\\n\\n---\\n\\n' + businessPart } }];\n"
+      },
+      "id": "185514b9-9b03-4f46-908e-14abbc1fb1ca",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        23152,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-6",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-4-6"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.prompt }}"
+            }
+          ]
+        },
+        "options": {
+          "maxTokens": 4096
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        23408,
+        688
+      ],
+      "id": "182e7092-a103-4a5e-88d6-842566ed64c4",
+      "name": "Claude API — Generate Config JSON",
+      "credentials": {
+        "anthropicApi": {
+          "id": "SeGPSuuapVDdUqMy",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// NEW Transform node for Build Pipeline — replaces the old Tally parser.\n// Receives data forwarded from the Website Intake workflow.\n// Input: $json.body.* (intake form fields) — same structure as the intake webhook.\n// Output: flat fields matching what the rest of the Build Pipeline expects.\n\nconst input = $input.item.json.body ?? $input.item.json;\n\nconst packageMap = {\n  'starter':   { pages: ['home', 'contact'], tier: 1, label: 'Starter' },\n  'full-site': { pages: ['home', 'services', 'about', 'contact', 'pricing', 'faq'], tier: 1, label: 'Full Site' },\n  'tier-2':    { pages: ['home', 'services', 'about', 'contact', 'pricing', 'faq'], tier: 2, label: 'Tier 2' },\n};\n\nconst pkg = packageMap[input.packageTier] ?? packageMap['starter'];\n\nreturn [{ json: {\n  business_name:     input.businessName,\n  business_url:      input.businessUrl || null,\n  business_phone:    input.businessPhone,\n  business_address:  input.businessAddress,\n  business_city:     input.businessCity,\n  business_state:    input.businessState,\n  primary_color:     input.primaryColor || null,\n  secondary_color:   input.secondaryColor || null,\n  tagline:           input.tagline || null,\n  package:           pkg.label,\n  pages_needed:      pkg.pages,\n  tier:              pkg.tier,\n  appointment_url:   input.bookingLink || null,\n  payment_url:       input.paymentLink || null,\n  google_review_url: input.googleReviewUrl || null,\n  notes:             input.additionalNotes || null,\n}}];\n"
+      },
+      "id": "7193c253-b948-47ee-a862-e0212b353c8f",
+      "name": "Build Pipeline Transform",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        22128,
+        672
+      ],
+      "notes": "CUT THIS NODE and paste it into the Website Build Pipeline workflow. This REPLACES the existing 'Transform Tally Payload' node. Connect: new webhook trigger → new Respond → THIS NODE → Has Existing Website?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"status\":\"build-started\"}",
+        "options": {}
+      },
+      "id": "c592e6cc-cf46-419a-9f04-8cc95d49ea81",
+      "name": "Build Pipeline Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        21888,
+        672
+      ],
+      "notes": "CUT THIS NODE and paste it into the Website Build Pipeline workflow. Connect it between the new webhook trigger and the Transform Tally Payload node."
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "build-website",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "19b55f71-0c20-46ce-b786-494a49cdff85",
+      "name": "Build Pipeline Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        21680,
+        672
+      ],
+      "webhookId": "apex-build-website-trigger",
+      "onError": "continueRegularOutput",
+      "notes": "CUT THIS NODE and paste it into the Website Build Pipeline workflow. Connect it to the Transform Tally Payload node (replacing the old Tally Form Submission trigger). Then delete this node from this workflow."
+    }
+  ],
+  "pinData": {
+    "Build Pipeline Trigger": [
+      {
+        "json": {
+          "headers": {
+            "host": "apex-agentics.app.n8n.cloud",
+            "user-agent": "axios/1.13.5",
+            "content-length": "529",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "20.218.238.124",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "DE",
+            "cf-ray": "9e294143daff1dc1-FRA",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "x-forwarded-for": "20.218.238.124, 172.70.240.100",
+            "x-forwarded-host": "apex-agentics.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-34-7665fc5945-tc7s5",
+            "x-is-trusted": "yes",
+            "x-real-ip": "20.218.238.124"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "contactName": "Renee Sattler",
+            "contactEmail": "michael.sattler04@gmail.com",
+            "businessName": "Workout Pro",
+            "businessUrl": "https://www.crossfitsimpsonville.com/",
+            "businessPhone": "555-333-5454",
+            "businessAddress": "123 main street",
+            "businessCity": "simpsonville",
+            "businessState": "SC",
+            "primaryColor": "dark purple",
+            "secondaryColor": "black",
+            "tagline": "Become the Best Version of You",
+            "packageTier": "full-site",
+            "bookingLink": "",
+            "paymentLink": "",
+            "googleReviewUrl": "",
+            "additionalNotes": "",
+            "leadId": "",
+            "submittedAt": "2026-03-26T21:30:08.665Z"
+          },
+          "webhookUrl": "https://apex-agentics.app.n8n.cloud/webhook/build-website",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Has Existing Website?": {
+      "main": [
+        [
+          {
+            "node": "Firecrawl — Scrape Existing Site",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firecrawl — Scrape Existing Site": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Firecrawl Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Firecrawl Error": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse and Validate Config JSON": {
+      "main": [
+        [
+          {
+            "node": "Unsplash — Fetch Hero Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error — Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unsplash — Fetch Hero Image": {
+      "main": [
+        [
+          {
+            "node": "Inject Hero Image URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Inject Hero Image URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inject Hero Image URL": {
+      "main": [
+        [
+          {
+            "node": "GitHub — Create Client Repo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Fork to Complete": {
+      "main": [
+        [
+          {
+            "node": "GitHub — Get config.json SHA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub — Get config.json SHA": {
+      "main": [
+        [
+          {
+            "node": "GitHub — Commit config.json",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GitHub — Commit config.json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub — Commit config.json": {
+      "main": [
+        [
+          {
+            "node": "Vercel — Create Project",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error — Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vercel — Create Project": {
+      "main": [
+        [
+          {
+            "node": "Vercel — Trigger Deploy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error — Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vercel — Trigger Deploy": {
+      "main": [
+        [
+          {
+            "node": "Wait for Vercel Deploy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error — Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Vercel Deploy": {
+      "main": [
+        [
+          {
+            "node": "Telegram — HITL Review Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email — HITL Review Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude API — Generate Config JSON": {
+      "main": [
+        [
+          {
+            "node": "Parse and Validate Config JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Claude API — Generate Config JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub — Create Client Repo": {
+      "main": [
+        [
+          {
+            "node": "Wait for Fork to Complete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error — Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Pipeline Transform": {
+      "main": [
+        [
+          {
+            "node": "Has Existing Website?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Pipeline Respond": {
+      "main": [
+        [
+          {
+            "node": "Build Pipeline Transform",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Pipeline Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Pipeline Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "136d3e5c-679a-4999-9f35-10b0b3b58c72",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "12ddcd20b9775aed1f137499bb464f168c763a17424ede98d48c2ef4c205c0ac"
+  },
+  "id": "sgRcFgWD8xFU8dxU",
+  "tags": []
+}
